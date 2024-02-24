@@ -88,6 +88,9 @@ current dependencies are:
 
 This should run with minor mods on any platform with sufficient RAM to hold a tile.
 
+## Example DEM
+
+A Austria 10m Digital Elevation Model in pmtiles format, webp-lossles compressed for testing can be found [here](https://static.mah.priv.at/cors/AT-10m-webp.pmtiles).
 
 ## Performance
 
