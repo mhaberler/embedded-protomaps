@@ -47,16 +47,16 @@ gdalwarp \
     DTM_Austria_10m_v2_by_Sonny.tif \
     DTM_Austria_10m_v2_by_Sonny_3857.tif
 
+# adapt --workers for your platform:
 rio rgbify   \
-    -b -10000   \
-    -i 0.1  \
+    --base-val -10000   \
+    --interval 0.1  \
+    --workers 8 \
     DTM_Austria_10m_v2_by_Sonny_3857.tif  \
     DTM_Austria_10m_v2_by_Sonny_3857_RGB.tif
 
-gdal2tiles.py --zoom=13-13 --processes=8  DTM_Austria_10m_v2_by_Sonny_3857_RGB.tif ./tiles
-
-mb-util --silent --image_format=png --scheme=xyz ./tiles/ DTM_Austria_10m_v2_by_Sonny_3857_RGB_13.mbtiles
-
+gdal2tiles.py --zoom=13-13 --tiledriver=WEBP --webp-lossless --processes=8  DTM_Austria_10m_v2_by_Sonny_3857_RGB.tif ./tiles
+mb-util --silent --image_format=webp --scheme=xyz ./tiles/ DTM_Austria_10m_v2_by_Sonny_3857_RGB_13.mbtiles
 pmtiles convert DTM_Austria_10m_v2_by_Sonny_3857_RGB_13.mbtiles DTM_Austria_10m_v2_by_Sonny_3857_RGB_13.pmtiles
 `````
 Copy the `.pmtiles` file to a fast SD card and set the name in `platformio.ini` accordingly.
