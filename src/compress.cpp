@@ -32,7 +32,7 @@ pmErrno_t decompress_gzip(const string_view str, buffer_ref &out) {
             decomp_size = 0;
             return PM_DECOMP_BUF_ALLOC_FAILED;
         }
-        LOG_DEBUG("%s iniial alloc %zu", __FUNCTION__, decomp_size);
+        LOG_DEBUG("%s initial alloc %zu", __FUNCTION__, decomp_size);
     }
 
     z_stream zs = {};

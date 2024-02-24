@@ -101,16 +101,7 @@ typedef enum {
     LS_PM_GETBYTES_FAILED,
     LS_GUNZIP_FAILED,
     LS_DESERIALIZE_DIR_FAILED,
-
 } locStatus_t;
-
-typedef enum {
-    ENC_NONE,
-    ENC_UNKNOWN,
-    ENC_PNG,
-    ENC_WEBP,
-    ENC_BAD_FORMAT,
-} encoding_t;
 
 typedef struct {
     double elevation;
@@ -126,7 +117,6 @@ typedef struct {
     uint32_t cache_hits;
     uint32_t cache_misses;
     uint16_t tile_size;
-    encoding_t encoding;
     uint8_t index;
 } demInfo_t;
 

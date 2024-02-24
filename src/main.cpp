@@ -1,5 +1,6 @@
 
 #include <M5Unified.h>
+#include <esp_task_wdt.h>
 
 #include <stdlib.h>
 #include <SPI.h>
@@ -10,6 +11,7 @@
 #include "logging.hpp"
 #include "protomap.hpp"
 #include "slippytiles.hpp"
+
 
 #ifdef CORES3
 #define AW9523_ADDR 0x58
@@ -33,7 +35,7 @@ void setup(void) {
 #else
     Serial.begin(115200);
 #endif
-    set_loglevel(LOG_LEVEL_INFO);
+    set_loglevel(LOG_LEVEL);
 
     LOG_INFO("C++ version: %ld", __cplusplus);
     LOG_INFO("free heap: %lu", ESP.getFreeHeap());

@@ -61,7 +61,7 @@ def decode_png(tile_data):
 
 
 if len(sys.argv) == 1:
-    pmtiles_path = "data/AT-10m-webp.pmtiles"
+    pmtiles_path = "data/DTM_Austria_10m_v2_by_Sonny_3857_RGB_13_webp.pmtiles"
 else:
     pmtiles_path = sys.argv[1]
 debug = len(sys.argv) > 2

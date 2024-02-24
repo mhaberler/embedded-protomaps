@@ -239,7 +239,7 @@ bool lookupTile(demInfo_t &di, locInfo_t *locinfo, double lat, double lon) {
                 }
                 directory = deserialize_directory(decomp.to_string(), pmerr);
             } else {
-                directory = deserialize_directory(decomp.to_string(), pmerr);
+                directory = deserialize_directory(io.to_string(), pmerr);
             }
             if (pmerr) {
                 locinfo->status = LS_DESERIALIZE_DIR_FAILED;
@@ -247,7 +247,6 @@ bool lookupTile(demInfo_t &di, locInfo_t *locinfo, double lat, double lon) {
                 return false;
             }
             entryv3 result = find_tile(directory,  tile_id);
-            result = find_tile(directory,  tile_id);
             if (!isNull(result)) {
                 if (result.run_length == 0) {
                     dir_offset = di.header.leaf_dirs_offset + result.offset;
