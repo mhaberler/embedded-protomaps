@@ -144,13 +144,14 @@ void printCache(void) {
 
 void printDems(void) {
     for (auto d: dems) {
-        LOG_INFO("dem %u: %s bbx=%.2f/%.2f..%.2f/%.2f tile_decode_err=%lu protomap_err=%lu hits=%lu misses=%lu tilesize=%u",
+        LOG_INFO("dem %u: %s coverage %.2f/%.2f..%.2f/%.2f tile_decode_err=%lu protomap_err=%lu hits=%lu misses=%lu tilesize=%u type %s",
                  d->index, d->path,
                  min_lat(d), min_lon(d),
                  max_lat(d), max_lon(d),
                  d->tile_decode_errors,
                  d->protomap_errors,
-                 d->cache_hits, d->cache_misses, d->tile_size);
+                 d->cache_hits, d->cache_misses, d->tile_size,
+                 tileType(d->header.tile_type));
     }
 }
 
