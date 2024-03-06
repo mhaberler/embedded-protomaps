@@ -48,7 +48,7 @@ Commands available are:
   tile [<zoom>] <lat> <lon>  : retrieve tile by coordinate (zoom is optional, defaults to maxzoom)
   zxy <z> <x> <y>  : retrieve tile by z x y
 
-; list files on the SD card:
+# list files on the SD card:
 
 > ls
 2024-02-24 17:57    384676568 DTM_Austria_10m_v2_by_Sonny_3857_RGB_13_webp.pmtiles
@@ -57,24 +57,24 @@ Commands available are:
 2023-03-21 14:44   9818653875 africa-latest.pmtiles
 2023-08-29 00:17  10055511763 basemapat_Ortho16.pmtiles
 
-; open a map on SD - this being a raster DEM
+# open a map on SD - this being a raster DEM
 
 > map  DTM_Austria_10m_v2_by_Sonny_3857_RGB_13_webp.pmtiles
 DTM_Austria_10m_v2_by_Sonny_3857_RGB_13_webp.pmtiles: zoom 13..13 resolution: 12.87m/pixel coverage 46.24/9.31..49.05/17.25 type WEBP
 
-; lookup elevation at my home Location
+# lookup elevation at my home Location
 
 > ele 47 15
 blob retrieve 95081 us
 blob decompress 171618 us
 elevation at 47.0000,15.0000: 895.30 meter
 
-; open an OSM vector pmtiles map (110GB)
+# open an OSM vector pmtiles map (110GB)
 
 > map protomaps-basemap-opensource-20230408.pmtiles
 protomaps-basemap-opensource-20230408.pmtiles: zoom 0..15 resolution: 4.78m/pixel coverage -90.00/-180.00..90.00/180.00 type MVT
 
-; lookup a location:
+# lookup a location:
 
 > tile 47 15
 using max_zoom 15
