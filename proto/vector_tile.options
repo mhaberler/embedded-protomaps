@@ -1,0 +1,4 @@
+vector_tile.Tile.extensions max_size:5
+vector_tile.Tile.Layer.name max_size:30
+vector_tile.Tile.Value.string_value max_size:30
+

@@ -4,3 +4,9 @@
 [submodule "libwebp"]
 	path = libwebp
 	url = https://github.com/webmproject/libwebp.git
+[submodule "nanopb"]
+	path = nanopb
+	url = https://github.com/nanopb/nanopb.git
+[submodule "util/svd"]
+	path = util/svd
+	url = https://github.com/espressif/svd.git
