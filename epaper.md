@@ -3,15 +3,16 @@ Steps to build and exercise the Epaper demo
 1. prepare an SD  card. I formatted a 400GB SanDisk Extreme as exFat filesystem with MacOS Disk Utility.
 2. copy some pmtiles files to the card. For my elevation demo, use https://static.mah.priv.at/cors/DTM_Austria_10m_v2_by_Sonny_3857_RGB_13_webp.pmtiles .
 3. in VSCode, install the Platformio extension.
-4. clone https://github.com/mhaberler/embedded-protomaps and check out the e5paper branch
-5. open the repo in VSCode
-6. what now happens will take a while as platformio downloads toolchains, libraries etc
-7. with the plug icon at the bottom, select the epaper serial port. Mine looks like so: cu.wchusbserial57130467711
-8. build by clicking the checkmark icon
-9. upload by clicking the right arrow icon
-10. connect to the console by clicking the plug icon
-11. hit the e5paper reset button
-12. console output should look like so:
+4. `git clone https://github.com/mhaberler/embedded-protomaps --branch e5paper`
+5. `git submodule update --init`
+6. open the repo in VSCode
+7. what now happens will take a while as platformio downloads toolchains, libraries etc
+8. with the plug icon at the bottom, select the epaper serial port. Mine looks like so: cu.wchusbserial57130467711
+9. build by clicking the checkmark icon
+10. upload by clicking the right arrow icon
+11. connect to the console by clicking the plug icon
+12. hit the e5paper reset button
+13. console output should look like so:
 
 `````
 *  Executing task: platformio device monitor --environment epaper-pmtiles-example --port /dev/cu.wchusbserial57130467711 
