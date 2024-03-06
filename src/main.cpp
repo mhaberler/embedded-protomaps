@@ -174,6 +174,18 @@ int mountSD(int argc, char** argv) {
     return 0;
 };
 
+int comment(int argc, char **argv)
+{
+    auto lastArg = argc - 1;
+    for ( int i = 0; i < argc; i++) {
+        shell.print(argv[i]);
+        if (i < lastArg)
+            shell.print(F(" "));
+    }
+    shell.println();
+    return 0;
+}
+
 void setup_shell(void) {
     shell.attach(Serial);
     shell.addCommand(F("? : print help"), shell.printHelp);
@@ -190,6 +202,7 @@ void setup_shell(void) {
     shell.addCommand(F("sd : mount SD card"), mountSD);
     shell.addCommand(F("lc : list tile cache"), showCache);
     // shell.addCommand(F("cc : clear tile cache"), emptyCache);
+    shell.addCommand(F("# text : comment line"), comment);
 
     shell.printHelp(0, NULL);
     shell.print("> ");
