@@ -1,3 +1,4 @@
+#include "FS.h"
 #include <SdFat.h>
 #include <string_view>
 
@@ -9,7 +10,7 @@
 using namespace std;
 using namespace pmtiles;
 
-extern SdFat sdfat;
+extern SdFs sd;
 
 pmErrno_t decompress_gzip(const string_view str, buffer_ref &out);
 
@@ -61,12 +62,12 @@ mapInfo_t *addMap(const char *path) {
     int rc;
     int8_t pmerr;
 
-    if (!sdfat.exists(path)) {
+    if (!sd.exists(path)) {
 
     }
     mapInfo_t *mi = new mapInfo_t();
-    // if (!sdfat.open(&mi->fp, path, O_RDONLY)) {
-    mi->fp = sdfat.open(path, O_RDONLY);
+    // if (!sd.open(&mi->fp, path, O_RDONLY)) {
+    mi->fp = sd.open(path, O_RDONLY);
     if (!mi->fp.isOpen()) {
         LOG_ERROR("cant open %s", path);
         return nullptr;
@@ -162,27 +163,27 @@ void clearCache(void) {
     }
 }
 
-    void dumpMaps(void) {
-        LOG_INFO("%lu map(s) loaded:",  maps.size());
-        for (auto m: maps) {
-            LOG_INFO("map %u: %s coverage %.2f/%.2f..%.2f/%.2f tile_decode_err=%lu protomap_err=%lu hits=%lu misses=%lu tilesize=%u type %s",
-                     m->index, m->path.c_str(),
-                     min_lat(m), min_lon(m),
-                     max_lat(m), max_lon(m),
-                     m->tile_decode_errors,
-                     m->protomap_errors,
-                     m->cache_hits, m->cache_misses, m->tile_size,
-                     tileType(m->header.tile_type));
-        }
+void dumpMaps(void) {
+    LOG_INFO("%lu map(s) loaded:",  maps.size());
+    for (auto m: maps) {
+        LOG_INFO("map %u: %s coverage %.2f/%.2f..%.2f/%.2f tile_decode_err=%lu protomap_err=%lu hits=%lu misses=%lu tilesize=%u type %s",
+                 m->index, m->path.c_str(),
+                 min_lat(m), min_lon(m),
+                 max_lat(m), max_lon(m),
+                 m->tile_decode_errors,
+                 m->protomap_errors,
+                 m->cache_hits, m->cache_misses, m->tile_size,
+                 tileType(m->header.tile_type));
     }
+}
 
-    static void freeTile(tile_t *tile) {
-        if (tile == NULL)
-            return;
-        if (tile->buffer != NULL)
-            FREE(tile->buffer);
-        FREE(tile);
-    }
+static void freeTile(tile_t *tile) {
+    if (tile == NULL)
+        return;
+    if (tile->buffer != NULL)
+        FREE(tile->buffer);
+    FREE(tile);
+}
 
     static void evictTile(uint64_t key, tile_t *t) {
         LOG_DEBUG("evict %s", keyStr(key).c_str());
@@ -191,231 +192,233 @@ void clearCache(void) {
         }
     }
 
-    tileStatus_t fetchTileByLatLong(mapInfo_t &mi, tile_t **tile, double lat, double lon, uint8_t zoom, uint32_t &offset_x, uint32_t & offset_y) {
-        xyz_t key;
-        int rc;
-        int8_t pmerr;
-        uint32_t tile_x, tile_y;
-        compute_pixel_offset(lat, lon, zoom, mi.tile_size,
-                             tile_x, tile_y, offset_x, offset_y);
-        *tile = nullptr;
-        tileStatus_t st = fetchTileXYZ(mi, tile, tile_x, tile_y, zoom);
-        if (*tile) {
-            (*tile)->offset_x = offset_x;
-            (*tile)->offset_y = offset_y;
-        }
-        return st;
+tileStatus_t fetchTileByLatLong(mapInfo_t &mi, tile_t **tile, double lat, double lon, uint8_t zoom, uint32_t &offset_x, uint32_t & offset_y) {
+    xyz_t key;
+    int rc;
+    int8_t pmerr;
+    uint32_t tile_x, tile_y;
+    compute_pixel_offset(lat, lon, zoom, mi.tile_size,
+                         tile_x, tile_y, offset_x, offset_y);
+    *tile = nullptr;
+    tileStatus_t st = fetchTileXYZ(mi, tile, tile_x, tile_y, zoom);
+    if (*tile) {
+        (*tile)->offset_x = offset_x;
+        (*tile)->offset_y = offset_y;
     }
+    return st;
+}
 
-    tileStatus_t fetchTileXYZ(mapInfo_t &mi, tile_t **t, uint16_t tile_x, uint16_t tile_y, uint8_t zoom) {
-        xyz_t key;
-        int rc;
-        int8_t pmerr;
-        uint32_t offset_x, offset_y;
+tileStatus_t fetchTileXYZ(mapInfo_t &mi, tile_t **t, uint16_t tile_x, uint16_t tile_y, uint8_t zoom) {
+    xyz_t key;
+    int rc;
+    int8_t pmerr;
+    uint32_t offset_x, offset_y;
 
-        LOG_VERBOSE("%u %lu %lu", zoom, tile_x, tile_y);
+    LOG_VERBOSE("%u %lu %lu", zoom, tile_x, tile_y);
 
-        key.entry.index = mi.index;
-        key.entry.x =  (uint16_t)tile_x;
-        key.entry.y =  (uint16_t)tile_y;
-        key.entry.z = mi.header.max_zoom;
-        TIMESTAMP(fetchtile);
+    key.entry.index = mi.index;
+    key.entry.x =  (uint16_t)tile_x;
+    key.entry.y =  (uint16_t)tile_y;
+    key.entry.z = mi.header.max_zoom;
+    TIMESTAMP(fetchtile);
 
-        if (!tile_cache.exists(key.key)) {
-            LOG_DEBUG("cache entry %s not found", keyStr(key.key).c_str());
-            mi.cache_misses++;
+    if (!tile_cache.exists(key.key)) {
+        LOG_DEBUG("cache entry %s not found", keyStr(key.key).c_str());
+        mi.cache_misses++;
 
-            STARTTIME(fetchtile);
+        STARTTIME(fetchtile);
 
-            uint64_t tile_id = zxy_to_tileid(mi.header.max_zoom, tile_x, tile_y, pmerr);
-            if (pmerr != PMAP_OK) {
-                LOG_ERROR("zxy_to_tileid failed: %d", pmerr);
-                mi.protomap_errors++;
-                return TS_PM_XYZ2TID_FAILED;
-            }
-            bool found = false;
+        uint64_t tile_id = zxy_to_tileid(mi.header.max_zoom, tile_x, tile_y, pmerr);
+        if (pmerr != PMAP_OK) {
+            LOG_ERROR("zxy_to_tileid failed: %d", pmerr);
+            mi.protomap_errors++;
+            return TS_PM_XYZ2TID_FAILED;
+        }
+        bool found = false;
 
-            uint64_t dir_offset  = mi.header.root_dir_offset;
-            uint64_t dir_length = mi.header.root_dir_bytes;
+        uint64_t dir_offset  = mi.header.root_dir_offset;
+        uint64_t dir_length = mi.header.root_dir_bytes;
 
             buffer_ref decomp;
             buffer_ref io;
 
-            for (int i = 0; i < 4; i++) {
-                if ((rc = get_bytes(mi.fp, dir_offset, dir_length, io)) != PM_OK) {
+        for (int i = 0; i < 4; i++) {
+            if ((rc = get_bytes(mi.fp, dir_offset, dir_length, io)) != PM_OK) {
+                mi.protomap_errors++;
+                return TS_PM_GETBYTES_FAILED;
+            }
+            std::vector<entryv3> directory;
+            if (mi.header.internal_compression == COMPRESSION_GZIP) {
+                if ((rc = decompress_gzip(string_view(io.to_string()), decomp)) != PM_OK) {
                     mi.protomap_errors++;
-                    return TS_PM_GETBYTES_FAILED;
+                    return TS_GUNZIP_FAILED;
                 }
-                std::vector<entryv3> directory;
-                if (mi.header.internal_compression == COMPRESSION_GZIP) {
+                LOG_DEBUG("gunzip %u -> %u", io.size(), decomp.size());
+                directory = deserialize_directory(decomp.to_string(), pmerr);
+            } else {
+                directory = deserialize_directory(io.to_string(), pmerr);
+            }
+            if (pmerr) {
+                mi.protomap_errors++;
+                return TS_DESERIALIZE_DIR_FAILED;
+            }
+            entryv3 result = find_tile(directory,  tile_id);
+            if (!isNull(result)) {
+                if (result.run_length == 0) {
+                    dir_offset = mi.header.leaf_dirs_offset + result.offset;
+                    dir_length = result.length;
+                } else {
+                    if ((rc = get_bytes(mi.fp, mi.header.tile_data_offset + result.offset, result.length, io)) != PM_OK) {
+                        mi.protomap_errors++;
+                        return TS_PM_GETBYTES_FAILED;
+                    }
+                    found = true;
+                    break;
+                }
+            }
+        }
+        if (found) {
+            size_t blob_size = 0;
+            const uint8_t *blob = nullptr;
+
+            PRINT_LAPTIME("blob retrieve %lu us", fetchtile);
+            STARTTIME(fetchtile);
+
+            switch (mi.header.tile_compression) {
+                case COMPRESSION_NONE:
+                    blob_size = io.size();
+                    blob = (uint8_t *)io.data();
+                    break;
+                case COMPRESSION_GZIP:
                     if ((rc = decompress_gzip(string_view(io.to_string()), decomp)) != PM_OK) {
                         mi.protomap_errors++;
-                        return TS_GUNZIP_FAILED;
+                        return TS_TILE_GUNZIP_FAILED;
                     }
+                    blob_size = decomp.size();
+                    blob = (uint8_t *)decomp.data();
                     LOG_DEBUG("gunzip %u -> %u", io.size(), decomp.size());
-                    directory = deserialize_directory(decomp.to_string(), pmerr);
-                } else {
-                    directory = deserialize_directory(io.to_string(), pmerr);
-                }
-                if (pmerr) {
+                    PRINT_LAPTIME("tile decompress %lu us", fetchtile);
+                    break;
+
+                case COMPRESSION_UNKNOWN:
+                case COMPRESSION_BROTLI:
+                case COMPRESSION_ZSTD:
                     mi.protomap_errors++;
-                    return TS_DESERIALIZE_DIR_FAILED;
-                }
-                entryv3 result = find_tile(directory,  tile_id);
-                if (!isNull(result)) {
-                    if (result.run_length == 0) {
-                        dir_offset = mi.header.leaf_dirs_offset + result.offset;
-                        dir_length = result.length;
-                    } else {
-                        if ((rc = get_bytes(mi.fp, mi.header.tile_data_offset + result.offset, result.length, io)) != PM_OK) {
-                            mi.protomap_errors++;
-                            return TS_PM_GETBYTES_FAILED;
-                        }
-                        found = true;
-                        break;
-                    }
-                }
+                    LOG_ERROR("unsuppored tile_compression %u", mi.header.tile_compression);
+                    return TS_UNSUPPORTED_TILE_COMPRESSION;
+                    break;
             }
-            if (found) {
-                size_t blob_size = 0;
-                const uint8_t *blob = nullptr;
-
-                PRINT_LAPTIME("blob retrieve %lu us", fetchtile);
-                STARTTIME(fetchtile);
-
-                switch (mi.header.tile_compression) {
-                    case COMPRESSION_NONE:
-                        blob_size = io.size();
-                        blob = (uint8_t *)io.data();
-                        break;
-                    case COMPRESSION_GZIP:
-                        if ((rc = decompress_gzip(string_view(io.to_string()), decomp)) != PM_OK) {
-                            mi.protomap_errors++;
-                            return TS_TILE_GUNZIP_FAILED;
-                        }
-                        blob_size = decomp.size();
-                        blob = (uint8_t *)decomp.data();
-                        LOG_DEBUG("gunzip %u -> %u", io.size(), decomp.size());
-                        PRINT_LAPTIME("tile decompress %lu us", fetchtile);
-                        break;
-
-                    case COMPRESSION_UNKNOWN:
-                    case COMPRESSION_BROTLI:
-                    case COMPRESSION_ZSTD:
-                        mi.protomap_errors++;
-                        LOG_ERROR("unsuppored tile_compression %u", mi.header.tile_compression);
-                        return TS_UNSUPPORTED_TILE_COMPRESSION;
-                        break;
-                }
-                STARTTIME(fetchtile);
-                switch (mi.header.tile_type) {
-                    case TILETYPE_PNG: {
-                            int width, height;
-                            uint8_t *buffer;
-                            tileStatus_t st = decode_webp(blob, blob_size, width, height, &buffer);
-                            switch (st) {
-                                case TS_VALID: {
-                                        tile_t *tile = (tile_t *) MALLOC(sizeof(tile_t));
-                                        tile->width = width;
-                                        tile->status = st;
-                                        tile->buffer = buffer;
-                                        tile->mapinfo = &mi;
-                                        tile->tile_x = key.entry.x;
-                                        tile->tile_y = key.entry.y;
-                                        tile->zoom = key.entry.z;
-                                        tile->tile_type = mi.header.tile_type;
-                                        tile_cache.put(key.key, tile);
-                                        *t = tile;
-                                        PRINT_LAPTIME("blob decompress %lu us", fetchtile);
-                                        return st;
-                                    }
-                                    break;
-                                default:
-                                    mi.tile_decode_errors++;
+            STARTTIME(fetchtile);
+            switch (mi.header.tile_type) {
+                case TILETYPE_PNG: {
+                        int width, height;
+                        uint8_t *buffer;
+                        tileStatus_t st = decode_webp(blob, blob_size, width, height, &buffer);
+                        switch (st) {
+                            case TS_VALID: {
+                                    tile_t *tile = (tile_t *) MALLOC(sizeof(tile_t));
+                                    tile->width = width;
+                                    tile->height = height;
+                                    tile->status = st;
+                                    tile->buffer = buffer;
+                                    tile->mapinfo = &mi;
+                                    tile->tile_x = key.entry.x;
+                                    tile->tile_y = key.entry.y;
+                                    tile->zoom = key.entry.z;
+                                    tile->tile_type = mi.header.tile_type;
+                                    tile_cache.put(key.key, tile);
+                                    *t = tile;
+                                    PRINT_LAPTIME("blob decompress %lu us", fetchtile);
                                     return st;
-                            }
-                        }
-                        break;
-                    case TILETYPE_WEBP: {
-                            int width, height;
-                            uint8_t *buffer;
-                            tileStatus_t st = decode_webp(blob, blob_size, width, height, &buffer);
-                            switch (st) {
-                                case TS_VALID:
-                                case TS_WEBP_LOSSY_COMPRESSION: {
-                                        tile_t *tile = (tile_t *) MALLOC(sizeof(tile_t));
-                                        tile->width = width;
-                                        tile->status = st;
-                                        tile->buffer = buffer;
-                                        tile->mapinfo = &mi;
-                                        tile->tile_x = key.entry.x;
-                                        tile->tile_y = key.entry.y;
-                                        tile->zoom = key.entry.z;
-                                        tile->tile_type = mi.header.tile_type;
-                                        tile_cache.put(key.key, tile);
-                                        *t = tile;
-                                        PRINT_LAPTIME("blob decompress %lu us", fetchtile);
-
-                                        return st;
-                                    }
-                                    break;
-                                default:
-                                    mi.tile_decode_errors++;
-                                    return st;
-                            }
-                        }
-                        break;
-                    case TILETYPE_MVT: {
-                            LOG_DEBUG("%s: MVT", keyStr(key.key).c_str());
-                            // tile_t *tile = (tile_t *)MALLOC(sizeof(tile_t));
-                            tile_t *tile = new tile_t();  // FIXME
-                            tileStatus_t st = decode_mvt(blob, blob_size, tile->mvt);
-                            if (st != TS_MVTDECODE_OK) {
+                                }
+                                break;
+                            default:
                                 mi.tile_decode_errors++;
-                                FREE(tile);
-                            } else {
-                                tile->buffer = nullptr;
-                                tile->status = st;
-                                tile->mapinfo = &mi;
-                                tile->tile_x = key.entry.x;
-                                tile->tile_y = key.entry.y;
-                                tile->zoom = key.entry.z;
-                                tile->tile_type = mi.header.tile_type;
-                                tile_cache.put(key.key, tile);
-                                PRINT_LAPTIME("blob decompress %lu us", fetchtile);
-                                *t = tile;
-                            }
-                            return st;
+                                return st;
                         }
-                        break;
-                    default:
-                        return TS_UNKNOWN_IMAGE_FORMAT;
-                }
-            } else {
-                return TS_TILE_NOT_FOUND;
+                    }
+                    break;
+                case TILETYPE_WEBP: {
+                        int width, height;
+                        uint8_t *buffer;
+                        tileStatus_t st = decode_webp(blob, blob_size, width, height, &buffer);
+                        switch (st) {
+                            case TS_VALID:
+                            case TS_WEBP_LOSSY_COMPRESSION: {
+                                    tile_t *tile = (tile_t *) MALLOC(sizeof(tile_t));
+                                    tile->width = width;
+                                    tile->height = height;
+                                    tile->status = st;
+                                    tile->buffer = buffer;
+                                    tile->mapinfo = &mi;
+                                    tile->tile_x = key.entry.x;
+                                    tile->tile_y = key.entry.y;
+                                    tile->zoom = key.entry.z;
+                                    tile->tile_type = mi.header.tile_type;
+                                    tile_cache.put(key.key, tile);
+                                    *t = tile;
+                                    PRINT_LAPTIME("blob decompress %lu us", fetchtile);
+
+                                    return st;
+                                }
+                                break;
+                            default:
+                                mi.tile_decode_errors++;
+                                return st;
+                        }
+                    }
+                    break;
+                case TILETYPE_MVT: {
+                        LOG_DEBUG("%s: MVT", keyStr(key.key).c_str());
+                        // tile_t *tile = (tile_t *)MALLOC(sizeof(tile_t));
+                        tile_t *tile = new tile_t();  // FIXME
+                        tileStatus_t st = decode_mvt(blob, blob_size, tile->mvt);
+                        if (st != TS_MVTDECODE_OK) {
+                            mi.tile_decode_errors++;
+                            FREE(tile);
+                        } else {
+                            tile->buffer = nullptr;
+                            tile->status = st;
+                            tile->mapinfo = &mi;
+                            tile->tile_x = key.entry.x;
+                            tile->tile_y = key.entry.y;
+                            tile->zoom = key.entry.z;
+                            tile->tile_type = mi.header.tile_type;
+                            tile_cache.put(key.key, tile);
+                            PRINT_LAPTIME("blob decompress %lu us", fetchtile);
+                            *t = tile;
+                        }
+                        return st;
+                    }
+                    break;
+                default:
+                    return TS_UNKNOWN_IMAGE_FORMAT;
             }
         } else {
-            LOG_DEBUG("cache entry %s found: ", keyStr(key.key).c_str());
-            tile_t *tile = tile_cache.get(key.key);
-            *t = tile;
-            mi.cache_hits++;
-            return TS_VALID;
+            return TS_TILE_NOT_FOUND;
         }
-        return TS_NOTREACHED;
+    } else {
+        LOG_DEBUG("cache entry %s found: ", keyStr(key.key).c_str());
+        tile_t *tile = tile_cache.get(key.key);
+        *t = tile;
+        mi.cache_hits++;
+        return TS_VALID;
     }
+    return TS_NOTREACHED;
+}
 
 
-    mapInfo_t *findMap(double lat, double lon, bool raster_only) {
-        for (auto mi: maps) {
-            if (raster_only && (mi->header.tile_type == TILETYPE_MVT))
-                continue;
-            if (mapContains(mi, lat, lon)) {
-                LOG_DEBUG("%.2f %.2f contained in raster map %s", lat, lon, mi->path.c_str());
-                return mi;
-            }
+mapInfo_t *findMap(double lat, double lon, bool raster_only) {
+    for (auto mi: maps) {
+        if (raster_only && (mi->header.tile_type == TILETYPE_MVT))
+            continue;
+        if (mapContains(mi, lat, lon)) {
+            LOG_DEBUG("%.2f %.2f contained in raster map %s", lat, lon, mi->path.c_str());
+            return mi;
         }
-        return nullptr;
     }
+    return nullptr;
+}
 
 
     string string_format(const string fmt, ...) {
@@ -457,48 +460,48 @@ void clearCache(void) {
         }
     }
 
-    const char *tileStatus(tileStatus_t st) {
-        switch  (st) {
-            case TS_VALID:
-                return "TS_VALID";
-            case TS_INVALID:
-                return "TS_INVALID";
-            case TS_NO_MEMORY:
-                return "TS_NO_MEMORY";
-            case TS_TILE_NOT_FOUND:
-                return "TS_TILE_NOT_FOUND";
-            case TS_WEBP_DECODE_ERROR:
-                return "TS_WEBP_DECODE_ERROR";
-            case TS_WEBP_LOSSY_COMPRESSION:
-                return "TS_WEBP_LOSSY_COMPRESSION";
-            case TS_PNG_DECODE_ERROR:
-                return "TS_PNG_DECODE_ERROR";
-            case TS_PNG_COMPRESSED:
-                return "TS_PNG_COMPRESSED";
-            case TS_WEBP_COMPRESSED:
-                return "TS_WEBP_COMPRESSED";
-            case TS_UNKNOWN_IMAGE_FORMAT:
-                return "TS_UNKNOWN_IMAGE_FORMAT";
-            case TS_PM_XYZ2TID_FAILED:
-                return "TS_PM_XYZ2TID_FAILED";
-            case TS_PM_GETBYTES_FAILED:
-                return "TS_PM_GETBYTES_FAILED";
-            case TS_GUNZIP_FAILED:
-                return "TS_GUNZIP_FAILED";
-            case TS_DESERIALIZE_DIR_FAILED:
-                return "TS_DESERIALIZE_DIR_FAILED";
-            case TS_TILE_TOO_LARGE:
-                return "TS_TILE_TOO_LARGE";
-            case TS_UNSUPPORTED_TILE_COMPRESSION:
-                return "TS_UNSUPPORTED_TILE_COMPRESSION";
-            case TS_TILE_GUNZIP_FAILED:
-                return "TS_TILE_GUNZIP_FAILED";
-            case TS_MVTDECODE_FAILED:
-                return "TS_MVTDECODE_FAILED";
-            case TS_MVTDECODE_OK:
-                return "TS_MVTDECODE_OK";
-            case TS_NOTREACHED:
-                return "TS_NOTREACHED";
-        }
-        return "unknown error";
+const char *tileStatus(tileStatus_t st) {
+    switch  (st) {
+        case TS_VALID:
+            return "TS_VALID";
+        case TS_INVALID:
+            return "TS_INVALID";
+        case TS_NO_MEMORY:
+            return "TS_NO_MEMORY";
+        case TS_TILE_NOT_FOUND:
+            return "TS_TILE_NOT_FOUND";
+        case TS_WEBP_DECODE_ERROR:
+            return "TS_WEBP_DECODE_ERROR";
+        case TS_WEBP_LOSSY_COMPRESSION:
+            return "TS_WEBP_LOSSY_COMPRESSION";
+        case TS_PNG_DECODE_ERROR:
+            return "TS_PNG_DECODE_ERROR";
+        case TS_PNG_COMPRESSED:
+            return "TS_PNG_COMPRESSED";
+        case TS_WEBP_COMPRESSED:
+            return "TS_WEBP_COMPRESSED";
+        case TS_UNKNOWN_IMAGE_FORMAT:
+            return "TS_UNKNOWN_IMAGE_FORMAT";
+        case TS_PM_XYZ2TID_FAILED:
+            return "TS_PM_XYZ2TID_FAILED";
+        case TS_PM_GETBYTES_FAILED:
+            return "TS_PM_GETBYTES_FAILED";
+        case TS_GUNZIP_FAILED:
+            return "TS_GUNZIP_FAILED";
+        case TS_DESERIALIZE_DIR_FAILED:
+            return "TS_DESERIALIZE_DIR_FAILED";
+        case TS_TILE_TOO_LARGE:
+            return "TS_TILE_TOO_LARGE";
+        case TS_UNSUPPORTED_TILE_COMPRESSION:
+            return "TS_UNSUPPORTED_TILE_COMPRESSION";
+        case TS_TILE_GUNZIP_FAILED:
+            return "TS_TILE_GUNZIP_FAILED";
+        case TS_MVTDECODE_FAILED:
+            return "TS_MVTDECODE_FAILED";
+        case TS_MVTDECODE_OK:
+            return "TS_MVTDECODE_OK";
+        case TS_NOTREACHED:
+            return "TS_NOTREACHED";
     }
+    return "unknown error";
+}

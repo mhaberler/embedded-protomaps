@@ -1,3 +1,4 @@
+#include "FS.h"
 #include <SdFat.h>
 #include <M5Unified.h>
 #include <SPI.h>
@@ -12,11 +13,16 @@
 double lat,lon,ref;
 mapInfo_t *mi;
 tile_t *tile;
-extern SdFat sdfat;
-extern SdBaseFile file;
+extern SdFs sd;
+extern FsFile file;
+extern M5GFX display;
 
 void setup_shell(void);
 bool init_sd_card(void);
+void draw_tile(tile_t *tile);
+void setup_draw(void);
+void loop_draw(void);
+
 const char *boardType(void);
 
 void setup(void) {
@@ -27,6 +33,7 @@ void setup(void) {
     auto cfg = M5.config();
     cfg.serial_baudrate = 115200;
     M5.begin(cfg);
+    M5.Display.init();
 #else
     Serial.begin(115200);
 #endif
@@ -34,7 +41,9 @@ void setup(void) {
     LOG_INFO("board type: %s", boardType());
 
     init_sd_card();
+    setup_draw();
     setup_shell();
+
 }
 
 int readMap(int argc, char** argv) {
@@ -56,7 +65,7 @@ int readMap(int argc, char** argv) {
 };
 
 int lsDir(int argc, char** argv) {
-    sdfat.ls(LS_DATE|LS_SIZE|((argc == 1) ? LS_R : 0));
+    sd.ls(LS_DATE|LS_SIZE|((argc == 1) ? LS_R : 0));
     return 0;
 };
 
@@ -109,6 +118,16 @@ int tileByZoomLatLong(int argc, char** argv) {
     if (tile != nullptr) {
         LOG_DEBUG("tile xyz: %u %u %u offset %u %u type %s",
                   tile->zoom, tile->tile_x, tile->tile_y,  tile->offset_x, tile->offset_y, tileType(tile->tile_type));
+        switch (tile->tile_type) {
+            case  TILETYPE_MVT:
+                break;
+            case TILETYPE_PNG:
+            case TILETYPE_JPEG:
+            case TILETYPE_WEBP:
+            case TILETYPE_AVIF:
+                draw_tile(tile);
+                break;
+        }
     }
     return 0;
 };
@@ -174,8 +193,7 @@ int mountSD(int argc, char** argv) {
     return 0;
 };
 
-int comment(int argc, char **argv)
-{
+int comment(int argc, char **argv) {
     auto lastArg = argc - 1;
     for ( int i = 0; i < argc; i++) {
         shell.print(argv[i]);
@@ -195,7 +213,7 @@ void setup_shell(void) {
     shell.addCommand(F("meta  : dump map metadata"), metaData);
     shell.addCommand(F("tile [<zoom>] <lat> <lon>  : retrieve tile by coordinate (zoom is optional, defaults to maxzoom)"), tileByZoomLatLong);
     shell.addCommand(F("zxy <z> <x> <y>  : retrieve tile by z x y"), tileByZXY);
-    shell.addCommand(F("display  : show tile information"), tileInfo);
+    shell.addCommand(F("ti  : show tile information"), tileInfo);
     shell.addCommand(F("ele   <lat> <lon> : display elevation at lat/lon"), lookupElevation);
     shell.addCommand(F("mem : display memory usage"), memoryUsage);
     shell.addCommand(F("log <level> : set log level, 0=None,1=Error,2=Warn,3=Info,4=Debug,5=Verbose"), logLevel);
@@ -209,6 +227,8 @@ void setup_shell(void) {
 }
 
 void loop(void) {
+    M5.update();
     shell.executeIfInput();
+    loop_draw();
     delay(1);
 }

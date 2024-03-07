@@ -1,5 +1,6 @@
 #pragma once
 
+#include "FS.h"
 #include <SdFat.h>
 
 #include <vector>
@@ -96,7 +97,7 @@ typedef enum {
 
 typedef struct {
     string path;
-    SdBaseFile fp;
+    FsFile fp;
     headerv3 header;
     JsonDocument metadata;
     uint32_t tile_decode_errors;
@@ -111,6 +112,7 @@ typedef struct {
 typedef struct {
     uint8_t *buffer;  // raster
     size_t width; // of a line in pixels
+    size_t height; 
     uint32_t tile_x;
     uint32_t tile_y;
     uint8_t zoom;
