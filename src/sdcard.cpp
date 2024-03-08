@@ -24,7 +24,7 @@ using namespace std;
 
 SdFs sd;
 
-extern M5GFX display;
+#define display M5.Display
 
 void describeCard(SdFs &sdfs) {
     LOG_INFO("SD card mounted successfully");
@@ -78,14 +78,14 @@ bool init_sd_card(void) {
     }
     if(!mounted) {
         M5_LOGE("Failed to mount 0x%x", sd.sdErrorCode());
-        M5.Display.startWrite();
-        M5.Display.clear(TFT_RED);
-        M5.Display.endWrite();
+        display.startWrite();
+        display.clear(TFT_RED);
+        display.endWrite();
         return false;
     }
-    M5.Display.startWrite();
-    M5.Display.clear(TFT_GREEN);
-    M5.Display.endWrite();
+    display.startWrite();
+    display.clear(TFT_GREEN);
+    display.endWrite();
     describeCard(sd);
     return true;
 }

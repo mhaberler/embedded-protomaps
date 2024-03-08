@@ -15,7 +15,7 @@ mapInfo_t *mi;
 tile_t *tile;
 extern SdFs sd;
 extern FsFile file;
-extern M5GFX display;
+#define display M5.Display
 
 void setup_shell(void);
 bool init_sd_card(void);

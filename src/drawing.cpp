@@ -6,7 +6,7 @@
 #include "logging.hpp"
 #include "protomap.hpp"
 
-auto& display = M5.Display;
+#define display M5.Display
 
 void draw_tile(tile_t *tile) {
     display.fillScreen(TFT_BLACK);
