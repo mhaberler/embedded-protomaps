@@ -3,9 +3,11 @@
  *
  */
 
+
 /*********************
  *      INCLUDES
  *********************/
+#include "../lvgl.h"
 #include "lv_demo_vector_graphic.h"
 
 #if LV_USE_DEMO_VECTOR_GRAPHIC
