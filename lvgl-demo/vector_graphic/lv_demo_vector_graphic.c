@@ -15,8 +15,12 @@
 /*********************
  *      DEFINES
  *********************/
+#ifndef WIDTH
 #define WIDTH 640
+#endif
+#ifndef HEIGHT
 #define HEIGHT 480
+#endif
 
 /**********************
  *      TYPEDEFS
