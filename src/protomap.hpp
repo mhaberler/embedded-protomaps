@@ -1,6 +1,5 @@
 #pragma once
 
-#include "FS.h"
 #include <SdFat.h>
 
 #include <vector>

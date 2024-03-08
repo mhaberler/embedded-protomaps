@@ -1,4 +1,3 @@
-#include "FS.h"
 #include <SdFat.h>
 #include <string_view>
 
@@ -185,12 +184,12 @@ static void freeTile(tile_t *tile) {
     FREE(tile);
 }
 
-    static void evictTile(uint64_t key, tile_t *t) {
-        LOG_DEBUG("evict %s", keyStr(key).c_str());
-        if (t != NULL) {
-            freeTile(t);
-        }
+static void evictTile(uint64_t key, tile_t *t) {
+    LOG_DEBUG("evict %s", keyStr(key).c_str());
+    if (t != NULL) {
+        freeTile(t);
     }
+}
 
 tileStatus_t fetchTileByLatLong(mapInfo_t &mi, tile_t **tile, double lat, double lon, uint8_t zoom, uint32_t &offset_x, uint32_t & offset_y) {
     xyz_t key;
@@ -239,8 +238,8 @@ tileStatus_t fetchTileXYZ(mapInfo_t &mi, tile_t **t, uint16_t tile_x, uint16_t t
         uint64_t dir_offset  = mi.header.root_dir_offset;
         uint64_t dir_length = mi.header.root_dir_bytes;
 
-            buffer_ref decomp;
-            buffer_ref io;
+        buffer_ref decomp;
+        buffer_ref io;
 
         for (int i = 0; i < 4; i++) {
             if ((rc = get_bytes(mi.fp, dir_offset, dir_length, io)) != PM_OK) {
@@ -421,44 +420,44 @@ mapInfo_t *findMap(double lat, double lon, bool raster_only) {
 }
 
 
-    string string_format(const string fmt, ...) {
-        int size = ((int)fmt.size()) * 2 + 50;   // Use a rubric appropriate for your code
-        string str;
-        va_list ap;
-        while (1) {     // Maximum two passes on a POSIX system...
-            str.resize(size);
-            va_start(ap, fmt);
-            int n = vsnprintf((char *)str.data(), size, fmt.c_str(), ap);
-            va_end(ap);
-            if (n > -1 && n < size) {  // Everything worked
-                str.resize(n);
-                return str;
-            }
-            if (n > -1)  // Needed size returned
-                size = n + 1;   // For null char
-            else
-                size *= 2;      // Guess at a larger size (OS specific)
+string string_format(const string fmt, ...) {
+    int size = ((int)fmt.size()) * 2 + 50;   // Use a rubric appropriate for your code
+    string str;
+    va_list ap;
+    while (1) {     // Maximum two passes on a POSIX system...
+        str.resize(size);
+        va_start(ap, fmt);
+        int n = vsnprintf((char *)str.data(), size, fmt.c_str(), ap);
+        va_end(ap);
+        if (n > -1 && n < size) {  // Everything worked
+            str.resize(n);
+            return str;
         }
-        return str;
+        if (n > -1)  // Needed size returned
+            size = n + 1;   // For null char
+        else
+            size *= 2;      // Guess at a larger size (OS specific)
     }
+    return str;
+}
 
-    const char *tileType(uint8_t tile_type) {
-        switch (tile_type) {
-            case TILETYPE_UNKNOWN:
-            default:
-                return "UNKNOWN";
-            case TILETYPE_MVT:
-                return "MVT";
-            case TILETYPE_PNG:
-                return "PNG";
-            case TILETYPE_JPEG:
-                return "JPEG";
-            case TILETYPE_WEBP:
-                return "WEBP";
-            case TILETYPE_AVIF:
-                return "AVIF";
-        }
+const char *tileType(uint8_t tile_type) {
+    switch (tile_type) {
+        case TILETYPE_UNKNOWN:
+        default:
+            return "UNKNOWN";
+        case TILETYPE_MVT:
+            return "MVT";
+        case TILETYPE_PNG:
+            return "PNG";
+        case TILETYPE_JPEG:
+            return "JPEG";
+        case TILETYPE_WEBP:
+            return "WEBP";
+        case TILETYPE_AVIF:
+            return "AVIF";
     }
+}
 
 const char *tileStatus(tileStatus_t st) {
     switch  (st) {

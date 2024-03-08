@@ -1,17 +1,21 @@
-#include "FS.h"
 #include <SdFat.h>
-#include <M5Unified.h>
-#include <M5GFX.h>
 
+#include "graphics.h"
 #include "logging.hpp"
 #include "protomap.hpp"
 
-#define display M5.Display
+#ifdef LOVYANGFX
+    LGFX display;
+#endif
+
+#ifdef M5UNIFIED
+    #define display M5.Display
+#endif
 
 void draw_tile(tile_t *tile) {
     display.fillScreen(TFT_BLACK);
     display.setAddrWindow(0, 0, display.width(), display.height());
-   
+
     display.startWrite(); // Occupy BUS
 
     // FIXME look into using pushImage

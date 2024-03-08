@@ -1,6 +1,5 @@
-#include "FS.h"
 #include <SdFat.h>
-#include <M5Unified.h>
+#include "graphics.h"
 #include <SPI.h>
 #include <Esp.h>
 
@@ -15,7 +14,14 @@ mapInfo_t *mi;
 tile_t *tile;
 extern SdFs sd;
 extern FsFile file;
-#define display M5.Display
+
+#ifdef LOVYANGFX
+    extern LGFX display;
+#endif
+
+#ifdef M5UNIFIED
+    #define display M5.Display
+#endif
 
 void setup_shell(void);
 bool init_sd_card(void);
@@ -37,13 +43,17 @@ void setup(void) {
 #else
     Serial.begin(115200);
 #endif
+
     set_loglevel(LOG_LEVEL_INFO);
+#ifdef LOVYANGFX
+    display.init();  // trigger autodetect
+#endif
     LOG_INFO("board type: %s", boardType());
 
-    init_sd_card();
     setup_draw();
-    setup_shell();
+    init_sd_card();
 
+    setup_shell();
 }
 
 int readMap(int argc, char** argv) {
@@ -227,7 +237,9 @@ void setup_shell(void) {
 }
 
 void loop(void) {
+#ifdef M5UNIFIED
     M5.update();
+#endif
     shell.executeIfInput();
     loop_draw();
     delay(1);

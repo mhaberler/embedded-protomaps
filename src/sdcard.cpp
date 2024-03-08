@@ -1,8 +1,7 @@
 #include <SdFat.h>
-#include <M5Unified.h>
-#include <M5GFX.h>
 #include <string>
 
+#include "graphics.h"
 #include "logging.hpp"
 
 using namespace std;
@@ -22,9 +21,15 @@ using namespace std;
     #define SPI_CLOCK 25000000L
 #endif
 
-SdFs sd;
+#ifdef LOVYANGFX
+    extern LGFX display;
+#endif
 
-#define display M5.Display
+#ifdef M5UNIFIED
+    #define display M5.Display
+#endif
+
+SdFs sd;
 
 void describeCard(SdFs &sdfs) {
     LOG_INFO("SD card mounted successfully");
@@ -77,7 +82,7 @@ bool init_sd_card(void) {
         delay(100);
     }
     if(!mounted) {
-        M5_LOGE("Failed to mount 0x%x", sd.sdErrorCode());
+        LOG_ERROR("Failed to mount 0x%x", sd.sdErrorCode());
         display.startWrite();
         display.clear(TFT_RED);
         display.endWrite();
